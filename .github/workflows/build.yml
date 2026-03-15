@@ -22,8 +22,18 @@ jobs:
         run: |
           pip install pyinstaller streamlit pdfminer.six requests pandas
 
+      - name: Find streamlit static path
+        run: |
+          python -c "import streamlit; import os; p = os.path.join(os.path.dirname(streamlit.__file__), 'static'); print('STREAMLIT_STATIC=' + p)"
+
       - name: Build exe with PyInstaller
         run: |
+          $st_path = python -c "import streamlit, os; print(os.path.dirname(streamlit.__file__))"
+          $st_static = Join-Path $st_path "static"
+          $st_runtime = Join-Path $st_path "runtime"
+          Write-Host "Streamlit path: $st_path"
+          Write-Host "Static path: $st_static"
+
           pyinstaller `
             --onefile `
             --noconfirm `
@@ -31,10 +41,12 @@ jobs:
             --hidden-import streamlit `
             --hidden-import streamlit.web `
             --hidden-import streamlit.web.bootstrap `
-            --hidden-import streamlit.web.cli `
+            --hidden-import streamlit.web.server `
+            --hidden-import streamlit.web.server.server `
             --hidden-import streamlit.runtime `
             --hidden-import streamlit.runtime.scriptrunner `
             --hidden-import streamlit.runtime.scriptrunner.magic_funcs `
+            --hidden-import streamlit.components.v1 `
             --hidden-import pdfminer `
             --hidden-import pdfminer.high_level `
             --hidden-import pdfminer.layout `
@@ -45,6 +57,7 @@ jobs:
             --hidden-import pandas `
             --collect-all streamlit `
             --collect-all pdfminer `
+            --add-data "${st_static};streamlit/static" `
             --add-data "app.py;." `
             launcher.py
 
@@ -52,9 +65,9 @@ jobs:
         run: |
           if (Test-Path "dist/TrialLens.exe") {
             $size = (Get-Item "dist/TrialLens.exe").length / 1MB
-            Write-Host "✅ TrialLens.exe — $([math]::Round($size, 1)) MB"
+            Write-Host "TrialLens.exe built: $([math]::Round($size, 1)) MB"
           } else {
-            Write-Host "❌ Build failed"; exit 1
+            Write-Host "Build failed"; exit 1
           }
 
       - name: Upload artifact
@@ -68,15 +81,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: "TrialLens 临镜 v1.0.${{ github.run_number }}"
+          name: "TrialLens v1.0.${{ github.run_number }}"
           body: |
             ## TrialLens 临镜
 
-            下载 `TrialLens.exe`，双击运行，无需安装任何软件。
-            首次启动约需 30-60 秒，请耐心等待浏览器自动打开。
-            如未自动打开，请手动访问 http://localhost:8501
+            下载 TrialLens.exe，双击运行，无需安装任何软件。
+            首次启动约需 30-60 秒，浏览器会自动打开。
+            如未自动打开，请访问 http://localhost:8501
 
-            © 2025 Dr Zhang. For academic and research use only.
+            (c) 2025 Dr Zhang. For academic and research use only.
           files: dist/TrialLens.exe
           draft: false
           prerelease: false
