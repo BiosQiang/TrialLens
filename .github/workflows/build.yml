@@ -2,12 +2,12 @@ name: Build TrialLens.exe
 
 on:
   push:
-    branches: [ main ]        # 每次推送到 main 分支自动触发
-  workflow_dispatch:           # 也可以在 GitHub 网页上手动触发
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-windows-exe:
-    runs-on: windows-latest    # 在 GitHub 的 Windows 服务器上打包
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
@@ -22,10 +22,6 @@ jobs:
         run: |
           pip install pyinstaller streamlit pdfminer.six requests pandas
 
-      - name: Copy app.py next to launcher.py for bundling
-        run: |
-          copy app.py app_bundle.py
-
       - name: Build exe with PyInstaller
         run: |
           pyinstaller `
@@ -33,10 +29,12 @@ jobs:
             --noconfirm `
             --name TrialLens `
             --hidden-import streamlit `
+            --hidden-import streamlit.runtime.scriptrunner.magic_funcs `
             --hidden-import pdfminer `
             --hidden-import pdfminer.high_level `
             --hidden-import pdfminer.layout `
             --hidden-import pdfminer.converter `
+            --hidden-import pdfminer.pdfpage `
             --hidden-import requests `
             --hidden-import pandas `
             --collect-all streamlit `
@@ -44,29 +42,42 @@ jobs:
             --add-data "app.py;." `
             launcher.py
 
-      - name: Upload exe as release artifact
+      - name: Test exe exists
+        run: |
+          if (Test-Path "dist/TrialLens.exe") {
+            Write-Host "✅ TrialLens.exe built successfully"
+            $size = (Get-Item "dist/TrialLens.exe").length / 1MB
+            Write-Host "Size: $([math]::Round($size, 1)) MB"
+          } else {
+            Write-Host "❌ Build failed"
+            exit 1
+          }
+
+      - name: Upload exe as artifact
         uses: actions/upload-artifact@v4
         with:
           name: TrialLens-Windows
           path: dist/TrialLens.exe
-          retention-days: 90    # 保留 90 天
+          retention-days: 90
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: github.ref == 'refs/heads/main'
         with:
           tag_name: v1.0.${{ github.run_number }}
-          name: "TrialLens v1.0.${{ github.run_number }}"
+          name: "TrialLens 临镜 v1.0.${{ github.run_number }}"
           body: |
-            ## TrialLens 临镜 v1.0
+            ## TrialLens 临镜
 
             ### 下载使用
-            下载下方的 `TrialLens.exe`，双击运行即可，无需安装任何软件。
+            下载下方的 `TrialLens.exe`，双击运行，无需安装任何软件。
+
+            **首次启动需要 30-60 秒**，请耐心等待浏览器自动打开。
+            如未自动打开，请手动访问 http://localhost:8501
 
             ### 使用步骤
-            1. 双击 `TrialLens.exe`，等待 5-10 秒
-            2. 浏览器自动打开工具界面
-            3. 上传 ClinicalTrials.gov 导出的 CSV，开始使用
+            1. 双击 `TrialLens.exe`
+            2. 等待浏览器自动打开（约 30-60 秒）
+            3. 上传 ClinicalTrials.gov 导出的 CSV 开始使用
 
             ---
             © 2025 Dr Zhang. For academic and research use only.
