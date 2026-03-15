@@ -29,12 +29,18 @@ jobs:
             --noconfirm `
             --name TrialLens `
             --hidden-import streamlit `
+            --hidden-import streamlit.web `
+            --hidden-import streamlit.web.bootstrap `
+            --hidden-import streamlit.web.cli `
+            --hidden-import streamlit.runtime `
+            --hidden-import streamlit.runtime.scriptrunner `
             --hidden-import streamlit.runtime.scriptrunner.magic_funcs `
             --hidden-import pdfminer `
             --hidden-import pdfminer.high_level `
             --hidden-import pdfminer.layout `
             --hidden-import pdfminer.converter `
             --hidden-import pdfminer.pdfpage `
+            --hidden-import pdfminer.pdfinterp `
             --hidden-import requests `
             --hidden-import pandas `
             --collect-all streamlit `
@@ -42,18 +48,16 @@ jobs:
             --add-data "app.py;." `
             launcher.py
 
-      - name: Test exe exists
+      - name: Verify exe
         run: |
           if (Test-Path "dist/TrialLens.exe") {
-            Write-Host "✅ TrialLens.exe built successfully"
             $size = (Get-Item "dist/TrialLens.exe").length / 1MB
-            Write-Host "Size: $([math]::Round($size, 1)) MB"
+            Write-Host "✅ TrialLens.exe — $([math]::Round($size, 1)) MB"
           } else {
-            Write-Host "❌ Build failed"
-            exit 1
+            Write-Host "❌ Build failed"; exit 1
           }
 
-      - name: Upload exe as artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: TrialLens-Windows
@@ -68,18 +72,10 @@ jobs:
           body: |
             ## TrialLens 临镜
 
-            ### 下载使用
-            下载下方的 `TrialLens.exe`，双击运行，无需安装任何软件。
-
-            **首次启动需要 30-60 秒**，请耐心等待浏览器自动打开。
+            下载 `TrialLens.exe`，双击运行，无需安装任何软件。
+            首次启动约需 30-60 秒，请耐心等待浏览器自动打开。
             如未自动打开，请手动访问 http://localhost:8501
 
-            ### 使用步骤
-            1. 双击 `TrialLens.exe`
-            2. 等待浏览器自动打开（约 30-60 秒）
-            3. 上传 ClinicalTrials.gov 导出的 CSV 开始使用
-
-            ---
             © 2025 Dr Zhang. For academic and research use only.
           files: dist/TrialLens.exe
           draft: false
