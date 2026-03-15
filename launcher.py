@@ -1,6 +1,5 @@
 """
 launcher.py - TrialLens launcher
-streamlit must run on the main thread (signal handler requirement)
 """
 
 import sys
@@ -8,7 +7,6 @@ import os
 import time
 import webbrowser
 import socket
-import tempfile
 import threading
 
 def find_free_port(start=8501):
@@ -24,7 +22,6 @@ def get_base_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 def open_browser_when_ready(port, url):
-    """Wait for port then open browser - runs in background thread"""
     for _ in range(90):
         time.sleep(1)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -33,7 +30,7 @@ def open_browser_when_ready(port, url):
                 print("\n[OK] Browser opened: {}".format(url))
                 print("Close this window to quit TrialLens.")
                 return
-    print("\n[ERROR] Startup timed out. Try visiting: {}".format(url))
+    print("\n[ERROR] Timed out. Try visiting: {}".format(url))
 
 def main():
     base_dir = get_base_dir()
@@ -49,7 +46,23 @@ def main():
         input("Press Enter to exit...")
         return
 
-    # Open browser in background thread (streamlit must own the main thread)
+    # Force streamlit to use its bundled static files (not Node dev server)
+    # Must be set before importing streamlit
+    os.environ["STREAMLIT_SERVER_PORT"]           = str(port)
+    os.environ["STREAMLIT_SERVER_HEADLESS"]       = "true"
+    os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+    os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"]   = "none"
+    os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"]    = "false"
+
+    # Point streamlit to its own static folder inside _MEIPASS
+    static_dir = os.path.join(base_dir, "streamlit", "static")
+    if os.path.isdir(static_dir):
+        print("static : {}".format(static_dir))
+        os.environ["STREAMLIT_STATIC_SERVING_ADDRESS"] = ""
+    else:
+        print("[WARN] static dir not found: {}".format(static_dir))
+
+    # Open browser in background thread
     t = threading.Thread(target=open_browser_when_ready, args=(port, url), daemon=True)
     t.start()
 
