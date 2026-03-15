@@ -22,17 +22,23 @@ jobs:
         run: |
           pip install pyinstaller streamlit pdfminer.six requests pandas
 
-      - name: Find streamlit static path
+      - name: Show streamlit paths (debug)
         run: |
-          python -c "import streamlit; import os; p = os.path.join(os.path.dirname(streamlit.__file__), 'static'); print('STREAMLIT_STATIC=' + p)"
+          python -c "
+          import streamlit, os
+          base = os.path.dirname(streamlit.__file__)
+          static = os.path.join(base, 'static')
+          print('streamlit base:', base)
+          print('static exists:', os.path.isdir(static))
+          if os.path.isdir(static):
+              files = os.listdir(static)[:5]
+              print('static contents:', files)
+          "
 
       - name: Build exe with PyInstaller
         run: |
-          $st_path = python -c "import streamlit, os; print(os.path.dirname(streamlit.__file__))"
-          $st_static = Join-Path $st_path "static"
-          $st_runtime = Join-Path $st_path "runtime"
-          Write-Host "Streamlit path: $st_path"
-          Write-Host "Static path: $st_static"
+          $st_base = python -c "import streamlit, os; print(os.path.dirname(streamlit.__file__))"
+          Write-Host "Streamlit base: $st_base"
 
           pyinstaller `
             --onefile `
@@ -57,7 +63,8 @@ jobs:
             --hidden-import pandas `
             --collect-all streamlit `
             --collect-all pdfminer `
-            --add-data "${st_static};streamlit/static" `
+            --add-data "${st_base}/static;streamlit/static" `
+            --add-data "${st_base}/runtime;streamlit/runtime" `
             --add-data "app.py;." `
             launcher.py
 
@@ -65,7 +72,7 @@ jobs:
         run: |
           if (Test-Path "dist/TrialLens.exe") {
             $size = (Get-Item "dist/TrialLens.exe").length / 1MB
-            Write-Host "TrialLens.exe built: $([math]::Round($size, 1)) MB"
+            Write-Host "TrialLens.exe: $([math]::Round($size, 1)) MB"
           } else {
             Write-Host "Build failed"; exit 1
           }
