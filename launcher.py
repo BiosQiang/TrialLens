@@ -46,14 +46,10 @@ def main():
         input("Press Enter to exit...")
         return
 
-    # Set env vars before any streamlit import
-    os.environ["STREAMLIT_SERVER_PORT"]                = str(port)
-    os.environ["STREAMLIT_SERVER_HEADLESS"]            = "true"
+    # Set config before importing streamlit
     os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
     os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"]   = "none"
 
-    # Import streamlit config and force development mode OFF
-    # This must happen before bootstrap.run()
     from streamlit import config as st_config
     st_config.set_option("global.developmentMode", False)
     st_config.set_option("server.port", port)
@@ -64,13 +60,25 @@ def main():
     static_dir = os.path.join(base_dir, "streamlit", "static")
     print("static exists: {}".format(os.path.isdir(static_dir)))
 
-    # Open browser in background thread
+    # Open browser in background thread (streamlit must own main thread)
     t = threading.Thread(target=open_browser_when_ready, args=(port, url), daemon=True)
     t.start()
 
     # Run streamlit on main thread
+    # Second arg is is_hello (bool), NOT a string
     from streamlit.web import bootstrap
-    bootstrap.run(app_py, "streamlit run", [], {})
+    bootstrap.run(
+        app_py,
+        False,      # is_hello — must be bool, not string
+        [],         # args
+        {           # flag_options
+            "server.port": port,
+            "server.headless": True,
+            "browser.gatherUsageStats": False,
+            "server.fileWatcherType": "none",
+            "global.developmentMode": False,
+        }
+    )
 
 if __name__ == "__main__":
     main()
