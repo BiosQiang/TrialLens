@@ -1,0 +1,77 @@
+name: Build TrialLens.exe
+
+on:
+  push:
+    branches: [ main ]        # 每次推送到 main 分支自动触发
+  workflow_dispatch:           # 也可以在 GitHub 网页上手动触发
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest    # 在 GitHub 的 Windows 服务器上打包
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller streamlit pdfminer.six requests pandas
+
+      - name: Copy app.py next to launcher.py for bundling
+        run: |
+          copy app.py app_bundle.py
+
+      - name: Build exe with PyInstaller
+        run: |
+          pyinstaller `
+            --onefile `
+            --noconfirm `
+            --name TrialLens `
+            --hidden-import streamlit `
+            --hidden-import pdfminer `
+            --hidden-import pdfminer.high_level `
+            --hidden-import pdfminer.layout `
+            --hidden-import pdfminer.converter `
+            --hidden-import requests `
+            --hidden-import pandas `
+            --collect-all streamlit `
+            --collect-all pdfminer `
+            --add-data "app.py;." `
+            launcher.py
+
+      - name: Upload exe as release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TrialLens-Windows
+          path: dist/TrialLens.exe
+          retention-days: 90    # 保留 90 天
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "TrialLens v1.0.${{ github.run_number }}"
+          body: |
+            ## TrialLens 临镜 v1.0
+
+            ### 下载使用
+            下载下方的 `TrialLens.exe`，双击运行即可，无需安装任何软件。
+
+            ### 使用步骤
+            1. 双击 `TrialLens.exe`，等待 5-10 秒
+            2. 浏览器自动打开工具界面
+            3. 上传 ClinicalTrials.gov 导出的 CSV，开始使用
+
+            ---
+            © 2025 Dr Zhang. For academic and research use only.
+          files: dist/TrialLens.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
