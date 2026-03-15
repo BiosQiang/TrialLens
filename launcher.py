@@ -30,7 +30,7 @@ def open_browser_when_ready(port, url):
                 print("\n[OK] Browser opened: {}".format(url))
                 print("Close this window to quit TrialLens.")
                 return
-    print("\n[ERROR] Timed out. Try visiting: {}".format(url))
+    print("\n[ERROR] Timed out. Visit manually: {}".format(url))
 
 def main():
     base_dir = get_base_dir()
@@ -46,21 +46,23 @@ def main():
         input("Press Enter to exit...")
         return
 
-    # Force streamlit to use its bundled static files (not Node dev server)
-    # Must be set before importing streamlit
-    os.environ["STREAMLIT_SERVER_PORT"]           = str(port)
-    os.environ["STREAMLIT_SERVER_HEADLESS"]       = "true"
+    # Set env vars before any streamlit import
+    os.environ["STREAMLIT_SERVER_PORT"]                = str(port)
+    os.environ["STREAMLIT_SERVER_HEADLESS"]            = "true"
     os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
     os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"]   = "none"
-    os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"]    = "false"
 
-    # Point streamlit to its own static folder inside _MEIPASS
+    # Import streamlit config and force development mode OFF
+    # This must happen before bootstrap.run()
+    from streamlit import config as st_config
+    st_config.set_option("global.developmentMode", False)
+    st_config.set_option("server.port", port)
+    st_config.set_option("server.headless", True)
+    st_config.set_option("browser.gatherUsageStats", False)
+    st_config.set_option("server.fileWatcherType", "none")
+
     static_dir = os.path.join(base_dir, "streamlit", "static")
-    if os.path.isdir(static_dir):
-        print("static : {}".format(static_dir))
-        os.environ["STREAMLIT_STATIC_SERVING_ADDRESS"] = ""
-    else:
-        print("[WARN] static dir not found: {}".format(static_dir))
+    print("static exists: {}".format(os.path.isdir(static_dir)))
 
     # Open browser in background thread
     t = threading.Thread(target=open_browser_when_ready, args=(port, url), daemon=True)
@@ -68,18 +70,7 @@ def main():
 
     # Run streamlit on main thread
     from streamlit.web import bootstrap
-    bootstrap.run(
-        app_py,
-        "streamlit run",
-        [],
-        {
-            "server.port": port,
-            "server.headless": True,
-            "browser.gatherUsageStats": False,
-            "server.fileWatcherType": "none",
-            "global.developmentMode": False,
-        }
-    )
+    bootstrap.run(app_py, "streamlit run", [], {})
 
 if __name__ == "__main__":
     main()
