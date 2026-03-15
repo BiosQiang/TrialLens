@@ -127,7 +127,7 @@ with tab_tool:
 
     with col_left:
         st.markdown('<div class="sec-lbl">① Trial List CSV / 试验列表</div>', unsafe_allow_html=True)
-        csv_file = st.file_uploader("", type="csv", label_visibility="collapsed")
+        csv_file = st.file_uploader("Upload CSV", type="csv", label_visibility="collapsed")
 
         # Cache CSV as soon as it's uploaded — survives rerun
         if csv_file is not None:
@@ -143,10 +143,10 @@ with tab_tool:
             st.success(f"✓  {n} trials loaded / 已读取 {n} 条  ({st.session_state.df_cache_name})")
 
         st.markdown('<div class="sec-lbl">② PDF Output Folder / 输出目录</div>', unsafe_allow_html=True)
-        pdf_dir_input = st.text_input("", placeholder=r"e.g.  F:\test\output", label_visibility="collapsed")
+        pdf_dir_input = st.text_input("Output folder", placeholder=r"e.g.  F:\test\output", label_visibility="collapsed")
 
         st.markdown('<div class="sec-lbl">③ Document Type / 文档类型</div>', unsafe_allow_html=True)
-        doc_type = st.radio("", ["Protocol", "SAP", "Both / 两者"], horizontal=True, label_visibility="collapsed")
+        doc_type = st.radio("Document type", ["Protocol", "SAP", "Both / 两者"], horizontal=True, label_visibility="collapsed")
         doc_type = doc_type.split(" ")[0]
 
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -161,7 +161,7 @@ with tab_tool:
         st.markdown('<div class="sec-lbl">④ Keyword Search / 关键词筛选</div>', unsafe_allow_html=True)
         st.markdown('<div class="search-box">', unsafe_allow_html=True)
         st.caption("Scans PDFs already in the output folder above  /  扫描上方目录中已下载的 PDF")
-        kw_input = st.text_input("Keywords", placeholder="RPSFT, rank preserving  (comma / 逗号分隔)", label_visibility="collapsed")
+        kw_input = st.text_input("Keywords input", placeholder="RPSFT, rank preserving  (comma / 逗号分隔)", label_visibility="collapsed")
         if kw_input:
             kws = [k.strip() for k in kw_input.split(",") if k.strip()]
             st.markdown("".join(f'<span class="kw-tag">{k}</span>' for k in kws), unsafe_allow_html=True)
